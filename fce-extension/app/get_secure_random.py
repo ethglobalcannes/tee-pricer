@@ -7,10 +7,12 @@ unpredictable at RFQ submission time and is stored on-chain alongside each
 quote, letting anyone reproduce and audit the exact MC draw sequence.
 
 Usage:
-    from get_secure_random import get_mc_seed
-    seed = get_mc_seed()          # raises if not secure
+    from get_secure_random import get_mc_seed_for_rfq
+    seed = get_mc_seed_for_rfq(rfq_id)   # rfq_id: bytes32 from decode_rfq()
     price, stderr = mc_pricer(S0, sigma, r, T, K, seed)
 """
+
+import hashlib
 
 from web3 import Web3
 
@@ -81,15 +83,28 @@ def get_secure_random(rpc_url: str = COSTON2_RPC) -> tuple[int, bool, int]:
     return random_number, is_secure, random_timestamp
 
 
-def get_mc_seed(rpc_url: str = COSTON2_RPC) -> int:
+def get_mc_seed_for_rfq(rfq_id: bytes, rpc_url: str = COSTON2_RPC) -> int:
     """
-    Return a uint32-safe MC seed derived from the latest SecureRandom value.
+    Return a per-RFQ uint32 MC seed: sha256(epoch_random || rfq_id) % 2**32.
 
-    Truncates the 256-bit random number to uint32 range — sufficient entropy
-    for numpy's PCG64 PRNG, which only requires a seed, not a cryptographic key.
+    rfq_id must be the contract-assigned bytes32 keccak256:
+        keccak256(abi.encode(address(this), chainid, nonce, asset, strike, expiry, isPut, quantity))
+
+    Mixing the epoch random with the contract-assigned rfq_id gives each RFQ
+    a unique, unpredictable draw sequence while keeping full on-chain auditability:
+    anyone can fetch Relay.getRandomNumber() at the quote timestamp and recompute
+    sha256(epoch_random || rfq_id) to reproduce the exact MC paths.
+
+    SHA-256 prevents a taker from engineering rfq_id = target XOR epoch_random
+    to steer the seed (preimage resistance). Safe because rfq_id includes a
+    contract-incremented nonce — cannot be predicted or replayed by the taker.
 
     Raises RuntimeError if the current epoch's random is not secure
-    (i.e. commit-reveal did not complete — rare, recovers next epoch in ~90s).
+    (commit-reveal incomplete — rare, auto-recovers next epoch in ~90s).
+
+    Parameters
+    ----------
+    rfq_id : bytes32 from decode_rfq() — the contract-assigned RFQ identifier
 
     Returns
     -------
@@ -101,7 +116,9 @@ def get_mc_seed(rpc_url: str = COSTON2_RPC) -> int:
             "SecureRandom: latest random number is not secure "
             "(commit-reveal incomplete — retry after next FTSO epoch, ~90s)"
         )
-    return random_number % (2**32)
+    combined = random_number.to_bytes(32, "big") + rfq_id  # 64 bytes total
+    digest = int.from_bytes(hashlib.sha256(combined).digest(), "big")
+    return digest % (2**32)
 
 
 # ---------------------------------------------------------------------------
@@ -112,5 +129,8 @@ if __name__ == "__main__":
     print(f"random_number   : {rand}")
     print(f"is_secure       : {is_secure}")
     print(f"random_timestamp: {ts}")
-    seed = rand % (2**32)
-    print(f"mc_seed (uint32): {seed}")
+
+    # Simulate a contract-assigned rfq_id (bytes32)
+    dummy_rfq_id = bytes.fromhex("abcd" * 16)
+    seed = get_mc_seed_for_rfq(dummy_rfq_id)
+    print(f"mc_seed (rfq)   : {seed}")
