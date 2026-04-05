@@ -7,6 +7,15 @@ the exact code that produced it.
 
 ---
 
+## Why fXRP on Flare
+
+[Rysk Finance already lists fXRP covered calls on HyperEVM](https://app.rysk.finance/earn/?chainId=999&asset=fXRP&collateral=fXRP&strike=USDT0&type=call).
+[Flare highlighted this](https://x.com/FlareNetworks/status/2019010265920983273) as a milestone for fXRP adoption.
+fXRP is Flare's own FAsset for XRP — the options should settle on Flare.
+This repo is the pricing engine for that.
+
+---
+
 ## The Core Idea
 
 RFQ-based options markets ask you to trust that the market maker priced fairly.
