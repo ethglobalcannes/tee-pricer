@@ -138,7 +138,7 @@ verify a quoted price. The seed comes from two sources:
 
 Combined as:
 
-$$\text{seed} = \text{sha256}(\text{epoch\_random} \mathbin{\|} \text{rfq\_id}) \bmod 2^{32}$$
+$$\text{seed} = \text{sha256}(\text{epochRandom} \mathbin{\|} \text{rfqId}) \bmod 2^{32}$$
 
 This means:
 - The taker **cannot steer** the seed (epoch random is fixed before the RFQ arrives)
