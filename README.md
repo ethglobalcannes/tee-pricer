@@ -38,7 +38,7 @@ fce-extension/app/
   get_secure_random.py ← per-RFQ MC seed via sha256(epoch_random ‖ rfq_id)
 ```
 
-The deployed FCE extension lives in [`ethglobalcannes/fce-sign`](https://github.com/ethglobalcannes/fce-sign).
+The deployed FCE extension lives in ["ethglobalcannes/fce-sign"](https://github.com/ethglobalcannes/fce-sign).
 This repo contains the pricing bricks that run inside it.
 
 ---
